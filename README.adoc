@@ -1,402 +1,275 @@
-= Contributing a guide
-:template-url: https://github.com/OpenLiberty/guides-template
-:common-includes: https://raw.githubusercontent.com/OpenLiberty/guides-common/master
+---
+layout: post
+title: "How to package a library as an Open Liberty user feature"
+# Do NOT change the categories section
+categories: blog
+author_picture: https://avatars3.githubusercontent.com/benjamin-confino
+author_github: https://github.com/benjamin-confino
+seo-title: How to package a library as an Open Liberty user feature - OpenLiberty.io
+seo-description: A step by step guide on how to package a library as an OpenLiberty user feature.
+blog_description: "A step by step guide on how to package a library as an OpenLiberty user feature."
+open-graph-image: https://openliberty.io/img/twitter_card.jpg
+open-graph-image-alt: Open Liberty Logo
+---
+= How to package a library as an Open Liberty user feature
+Benjamin Confino
+:imagesdir: /
+:url-prefix:
+:url-about: /
 
-Welcome to Open Liberty! In order to contribute a guide for Open Liberty, follow the steps in this README.
+== Learn how to integrate pre-existing software libraries into Open Liberty
 
-### Step 1: Set up your computer.
+Recently, a customer asked me how to package their library as a user feature in Open Liberty so that applications could use it without packaging it directly. If you wish to do something similar, or have some other reason to create an Open Liberty user feature, this guide will walk you through doing so step by step. In this tutorial, you will learn the following skills:
 
-* Install https://help.github.com/articles/set-up-git/[Git] and become familiar with the https://blog.github.com/2015-07-29-git-2-5-including-multiple-worktrees-and-triangular-workflows/#improved-support-for-triangular-workflows[Git triangular workflow].
-* Install and know the basics of https://maven.apache.org/index.html[Maven] or https://gradle.org[Gradle].
-* Install a text editor with the https://asciidoctor.org/docs/asciidoc-syntax-quick-reference/[AsciiDoc] compiler plugin and learn the syntax of AsciiDoc.
+    • How to import a maven artifact as a dependency and repackage it into an Open Liberty user feature.
+    • How to expose parts of your library as an API that can be imported
+    • How to expose parts of your library to CDI so it can be injected into user applications
 
-### Step 2 (Optional): Try some existing guides.
+=== Prerequisites
 
-Use the guides on https://openliberty.io/guides/[openliberty.io] as examples.
+Maven version 3.8.6 or later
 
-If you're not sure where to start, try the https://openliberty.io/guides/rest-intro.html[Creating a RESTful web service] guide followed by the  https://openliberty.io/guides/cdi-intro.html[Injecting dependencies into microservices] guide.
+=== Source code
 
-### Step 3: Know the structure and style.
+The source code for this post is in the link:https://github.com/benjamin-confino/liberty-user-feature-guide[liberty-user-feature-guide] repository, where you will find the following resources: 
 
-* Know your audience!
-** If the guide is introductory, explain the basic concepts of the technology. At the same time, try to avoid overwhelming the reader with too much information. If you're not sure if you've included the correct amount of info, consider asking a new user to try your guide.
+- `finish` This directory contains the completed project you should have at the conclusion of this guide. You can use it as a reference.
+- `start` This directory contains a skeleton you will modify to create the user feature.
+- `scripts` You can ignore this directory. 
 
-* Know the guide structure and the writing styles!
-** Take a look at the https://github.com/OpenLiberty/guides-template/wiki/Guidelines-for-Structure-and-Styles[Guidelines for Structure and Styles].
+=== XML Variables
 
+One of the trickiest things about packaging a liberty user feature with maven is ensuring variable names are constant across multiple XML files. To make this clearer, any variable that appears in two or more files will be set as a property in the root XML file.
 
-### Step 4: Create a new guide.
+There is one exception in BOM/pom.xml which has to be a raw string, it is clearly labelled.
 
-1. Clone the {template-url}[`guides-template`] to your own workspace.
+The feature names in an OpenLiberty server.xml file need to match an IBM-ShortName; in this case the one defined in esa/pom.xml. It the vast majority of cases the server.xml will be configured outside maven so I have done the same and left labels.
 
-2. Develop your guide in your own workspace.
+=== Example Libraries
 
-** Develop code and write tests that are based on the project structure in the {template-url}[`guides-template`]. To start, create your project in the `finish` directory. Make a simple application that demonstrates how to use your topic.
+For the purpose of this tutorial, Apache Commons is used as an example library that stands in for the library you wish to package as a user feature.
 
-** Copy the code from the `finish` directory to the `start` directory. Then, from the copy in the `start` directory, remove the code that you want the user to focus on.
+=== Structure
 
-** Write a guide that follows the `README.adoc` template (APPENDIX A) in the {template-url}[`guides-template`] repository. Introduce and explain the parts of code that you removed during the last step and tell the users where to copy and paste the code. Walk through how to build the `finish` directory, run the tests, and perform any other steps that users need to run your project on their own.
-
-3. Before proceeding further, you should review the https://github.com/OpenLiberty/guides-template/wiki/Self-Review-Checklist[checklist].
-
-4. Open a new issue in the https://github.com/OpenLiberty/guides-common/issues[guides-common] repository. Describe the topic you wrote, add a link to the repository that contains the complete draft of your guide, and the Open Liberty team will be notified.
-
-5. Certify the originality of your work by following the https://developercertificate.org[Developer Certificate of Origin (DCO)] approach and adding a line to the end of the Git commit message to sign your work:
-  ** `Signed-off-by: Jane Williams <jane.williams@gmail.com>`
-  ** The sign-off is just a line at the end of the commit message that certifies that you wrote it or otherwise have the right to pass it on as an open source patch.
-  ** Use your real name when you sign. Pseudonyms or anonymous contributions cannot be accepted.
-  ** Many Git UI tools have support for adding the `Signed-off-by` line to the end of your commit message. This line can be automatically added by the `git commit` command by using the `-s` option.
-
-6. After the Open Liberty team approves your guide and obtains your signed CLA, they will create a draft guide repository in the Open Liberty Project on GitHub for you. Your new repository will be named as `draft-guide-{projectid}`. Then, you can open a pull request that contains your commits for the guide, and the team will be notified for review. 
-
-7. Create a branch in the https://github.com/OpenLiberty/guides-common[guides-common] repository. Name your branch with your guide's projectid or something similar. This is where you will make your edits to `guide_categories.json` and `guide_tags.json` in order to categorize your guide and select tags.
-
-** Decide which subcategory your guide best fits into. The guide categories and subcategories are defined in the https://github.com/OpenLiberty/guides-common/blob/master/guide_categories.json[guide_categories.json] file and are shown in the table of contents on the /guides page. Your guide will appear under the subcategory you select in the json file. The order that the categories, subcategories and guides appear on the /guides page is based on the order of the json file. For a draft guide there is no need to include 'draft-guide-' in the json file. (I.e. For `draft-guide-{projectid}`, just add '{projectid}' to the json).
-
-*** If adding your guide to an existing subcategory, simply add the guide's projectid to the `guides` array below the desired `subcateogry_name`.
-
-*** If creating a new subcategory, add a new object to the `subcategories` array in the desired category. The new subcategory needs to have a `subcategory_name` string and a `guides` array. The `subcategory_name` should be sentence case (capitalize only the first letter of the entire phrase) as this is how it will be shown in the table of contents.
-
-** Select relevant tags for your guide. These tags can be used to search on the /guides page and will show up on the guide under the table of contents. Please avoid inventing new tags. The tags for all the guides are stored in https://github.com/OpenLiberty/guides-common/blob/master/guide_tags.json[guide_tags.json]. This file contains an array of JSON objects, one for each tag. Each tag object has a `"guides"` array where you can specify which guides the tag is applied to. Only tags with `"visible": "true"` will show up on the guides. If the tag does not have the `"visible"` key defined, the tag will be searchable, but it will not be visible on the guides. Another optional key is `additional_search_terms`. This is an array where you can specify additional search terms for the tag. These terms will not be visible on the guide. (e.g. 'Jakarta EE' and 'Java EE' are both searchable. Jakarta EE shows up as a visible tag, while Java EE is just a searchable tag).
-
-*** Once you have decided which tags you want to use, add your guide's projectid to the `"guides"` array for each of the tags you want to use. 
-
-** Open a pull request with your edits to https://github.com/OpenLiberty/guides-common/blob/master/guide_categories.json[guide_categories.json] and https://github.com/OpenLiberty/guides-common/blob/master/guide_tags.json[guide_tags.json].
-
-### Step 5: The Open Liberty team will review your guide.
-
-* You can see your feedback from the `Issues` section in your `draft-guide-{projectid}` repository when it's ready.
-* Follow up with the team's review discussions.
-
-## APPENDIX A: A template README.adoc
-Please open the README.adoc in a text editor or view it in `raw` form. 
-Follow the direction before the `BEGIN` line to remove all the instructions prior to commit. 
-Most instruction comments should be removed except the copyright.
+The project has the following structure:
 
 ```
-// As you start writing your guide, keep everything between BEGIN and END in the README.adoc, 
-// meaning delete anything else that is above or below the BEGIN and END lines inclusively. 
-// Also, please delete any instructions that begin with //--** after you read them
-// ----------- BEGIN -----------
-//--** INSTRUCTION: The copyright statement must appear at the top of the file
-// Copyright (c) 2023 IBM Corporation and others.
-// Licensed under Creative Commons Attribution-NoDerivatives
-// 4.0 International (CC BY-ND 4.0)
-//   https://creativecommons.org/licenses/by-nd/4.0/
-//
-// Contributors:
-//     IBM Corporation
-//
-:page-layout: guide-multipane
-//--** INSTRUCTION: The project id is the part of the git repository after the guide- and must be specified
-//--** :projectid: github repo name without the `guide-` prefix
-:projectid: template
-//--** INSTRUCTION: Provide an estimate of how long the guide will take to go through.
-:page-duration: 15 minutes
-//--** INSTRUCTION: Provide the date when the guide is published.  Format is YYYY-MM-DD.
-:page-releasedate: 2024-03-11
-//--** INSTRUCTION: Provide a description for the guide index page.
-:page-description: Learn how to create a todo list API as a REST service using JAX-RS, and Open Liberty.
-:guide-author: Open Liberty
-//--** INSTRUCTION: Specify the unique name of the guide that is used in the permalink.
-:page-related-guides: ['cdi-intro', 'rest-intro']
-//--** INSTRUCTION: Set 'basic', 'microprofile', 'none'
-:page-guide-category: microprofile
-//--** INSTRUCTION: Places the guide into the essentials section of a category
-//--** Requirement: Must define :page-guide-category:
-:page-essential: false
-//--** INSTRUCTION: Number is used to sort guide from left (lowest number) to right (highest number) in
-//--** the essentials section of a category
-//--** Requirement: Must have :page-essential: true
-:page-essential-order: 3
-//--** INSTRUCTION: Specify the slug in the website. This must be unique.
-:page-permalink: /guides/{projectid}
-//--** INSTRUCTION: Source the common page elements, clone `git@github.com:OpenLiberty/guides-common.git`.
-:common-includes: ../guides-common/
-//--** INSTRUCTION: Source the image directory to include any images for the guide.
-:imagesdir: /img/guide/{projectid}
-//--** INSTRUCTION: Update the SEO title for the guide
-:page-seo-title: Creating a REST service
-//--** INSTRUCTION: Update the SEO description for the guide
-:page-seo-description: Find out how to create a REST service on Open Liberty
-//--** INSTRUCTION: You can't have a new line between the attributes and the title.
-= Title of guide, starting with a gerund (Creating, Administering, and so on)
-//--** EXAMPLE: Creating a REST API for a todo list application
-
-[.hidden]
-NOTE: This repository contains the guide documentation source. To view the guide in published form,
-view it on the https://openliberty.io/guides/{projectid}.html[Open Liberty website].
-
-//--** Start the introduction with "You'll explore how to..." or something similarly catchy.
-//--** Write no more than two sentences, with meaningful information on what the user can accomplish
-//--** with this guide.
-//--** Do not start the introduction with "This guide...".
-//--** EXAMPLE: Learn how to create a todo list API as a REST service using JAX-RS, CDI, and Open Liberty.
-
-
-
-
-== What you'll learn
-
-//--** Write about what the user will learn in a meaningful intro paragraph.
-//--** Follow the intro paragraph with more details of what the user will learn, but still keep it brief.
-//--** See the REST guide at as an exemplar guide.
-//--** https://openliberty.io/guides/rest-intro.html
-//--** https://github.com/OpenLiberty/guide-rest-intro
-
-// EXAMPLE:
-// =============================================================================
-You'll learn how to create a todo list microservice using JAX-RS, CDI and Open Liberty.
-You will use Maven throughout the guide to build the microservice and deploy it
-to run on the Open Liberty application server.
-
-=== What is JAX-RS
-* Add a brief description of JAX-RS
-
-=== What is CDI
-* Add a brief description of CDI
-
-=== What is Open Liberty
-* Add brief description of Open Liberty, where applicable
-
-Brief description of the todo list micrioservice
-// =============================================================================
-
-// If you have an image you want to include in the guide, store the image in the `assets` 
-// folder in your repo, and add the following syntax
-image::image-name.png[Image Caption,width=100%]
-
-
-///////////////////////////
-// Getting started
-///////////////////////////
-
-//--** Add this getting started section to your guide if it is applicable.
-//--** Use the following include to pull in the git clone instructions from the guides-common repo.
-
-[role='command']
-include::{common-includes}/gitclone.adoc[]
-//--** This include adoc will have the heading "Getting started".
-//--** If you are not using this command include statement, you'll need to add it as a subheading,
-//--** ie, "== Getting started".
-
-
-
-
-///////////////////////////
-// Try what you’ll build
-///////////////////////////
-
-//--** This is a subsection of the "Getting started" section above. It should briefly walk the user
-//--** through how to setup everything in the "finish" directory and try out the finished version of
-//--** what they will be building.
-
-[role='command']
-include::{common-includes}/twyb-intro.adoc[]
-//--** This include adoc will have the subheading "Try what you'll build".
-//--** If you are not using this command include statement, you'll need to add it as a subheading,
-//--** ie, "=== Try what you'll build".
-
-//--** Describe what user should run and expect to see after running the complete version of the application.
-Add a brief explanation on how to use the finished application.
-
-[role='command']
-include::{common-includes}/twyb-end.adoc[]
-
-
-
-
-== Section title for this section, starting with a gerund like Creating, Building, etc
-
-//--** Add the various sections that are needed for a particular guide.
-
-//--** Start each additional section title with a meaningful gerund such as Creating, Building, Testing.
-//--** Follow the gerund with a meaningful noun phrase. For example: Creating a JAX-RS application
-//--** Have as many sections and section titles as needed.
-// EXAMPLES:
-
-* Building a todo list model
-
-* Creating an application manager
-
-* Creating the JAX-RS Resource
-
-
-//--** Write a sentence with the context like "Navigate to the `start` directory to begin." in the section
-//--** where user starts working with the implementation.
-
-//--** Add the include adoc for starting the Open Liberty server in development mode,
-//--** so that the server automatically picks up any changes that the users make to their application.
-
-//--** You can instruct the user to "Create", "Update", or "Replace" files in their application.
-
-//--** Note: There are classes that depend on each other. If one of the classes is not yet created
-//--** in the `start` directory, but it's being referenced in a different class, development mode might exit with a compilation error.
-//--** So be aware that you might need to predefine a minimal version of that class so that development mode does not exit with an error.
-
-//--** What to add for each section:
-//--** Start each section with a meaningful description about what the user is doing in the section.
-//--** Include code snippets.
-//--** Avoid making all the documentation a series of steps and tasks, bullets, or numbered lists.
-//--** Use tick marks around directories, files, values, class names, method names, and so on.
-//--** Example: `this-is-a-file`, `this/is/a/path`, `thisIsAMethod`.
-
-
-
-// EXAMPLE: The following block demonstrates how different sections look like for a todo application.
-// ======================================================================================================
-== EXAMPLE: Building a todo list model
-
-* Navigate to the `start` directory
-
-[role='command']
-include::{common-includes}/devmode-start.adoc[]
-
-* Represent an entry in a todo list
-
-[role="code_command hotspot", subs="quotes"]
-----
-#Create the `TodoModel` class.#
-`src/main/java/io/openliberty/guides/todolistSample/models/TodoModel.java`
-----
-
-TodoModel.java
-[source, Java, linenums, indent=0, role="code_column hide_tags=copyright"]
-----
-include::finish/src/main/java/io/openliberty/guides/todolistSample/models/TodoModel.java[]
-----
-
-* Getters, setters, and default constructor such that the model can be serialized/deserialized easily
-
-== EXAMPLE: Creating an application manager
-
-* Create a manager that is injected into the JAX-RS resource
-
-[role="code_command hotspot file=0", subs="quotes"]
-----
-#Create the `TodoManager` interface.#
-`src/main/java/io/openliberty/guides/todo/managers/TodoManager.java`
-----
-
-TodoManager.java
-[source, Java, linenums, indent=0, role="code_column hide_tags=copyright"]
-----
-include::finish/src/main/java/io/openliberty/guides/todolistSample/managers/TodoManager.java[]
-----
-
-* Next, create the sample todo manager class
-
-[role="code_command hotspot file=1", subs="quotes"]
-----
-#Create the `SampleTodoManager` class.#
-`src/main/java/io/openliberty/guides/todolistSample/managers/samples/SampleTodoManager.java`
-----
-
-SampleTodoManager.java
-[source, Java, linenums, indent=0, role="code_column hide_tags=copyright"]
-----
-include::finish/src/main/java/io/openliberty/guides/todolistSample/managers/samples/SampleTodoManager.java[]
-----
-
-* Implemented basic CRUD ([hotspot=create file=1]`Create`, [hotspot=read file=1]`Read`,
-[hotspot=update file=1]`Update`, and [hotspot=delete file=1]`Delete`) operations.
-* Manager is [hotspot=applicationScoped file=1]`ApplicationScoped`, which essentially means that it is a singleton.
-
-== EXAMPLE: Creating the JAX-RS resource
-
-* Description of the technology, possibly with a link to learn more.
-* Use CDI to inject the todo manager into the resource
-
-[role="code_command hotspot", subs="quotes"]
-----
-#Create the `TodoResource` class.#
-`src/main/java/io/openliberty/guides/todolistSample/resources/TodoResource.java`
-----
-
-TodoResource.java
-[source, Java, linenums, indent=0, role="code_column hide_tags=copyright"]
-----
-include::finish/src/main/java/io/openliberty/guides/todolistSample/resources/TodoResource.java[]
-----
-
-* The resource methods are accessible via HTTP
-* Use [hotspot=get]`GET`, [hotspot=post]`POST`, [hotspot=put]`PUT`,
-and [hotspot=delete]`DELETE` verbs to handle reading, creating, updating,
-and deleting resources
-* Validate data models and send appropriate response accordingly
-// ======================================================================================================
-
-
-
-
-//////////////////////////////////////////
-// Running the application
-//////////////////////////////////////////
-
-//--** Use the following include to pull in the adoc saying that development mode was already run,
-//--** and the changes were automatically picked up.
-[role='command']
-include::{common-includes}/devmode-build.adoc[]
-//--** This include adoc will have the subheading "Running the application".
-//--** If you are not using this command include statement, you'll need to add it as a subheading,
-//--** ie, "== Running the application".
-
-//--** In between here, you should state where you application can be found now that its running. ie. urls
-//--** Sample usage of the application
-//--** Suggestions for what changes the reader can make to explore the code
-
-
-== Testing the application
-
-//--** Show how to test your application.
-
-// EXAMPLE:
-// ======================================================================================================
-
-[role="code_command hotspot", subs="quotes"]
-----
-#Create the `TodoIT` class.#
-`finish/src/test/java/it/io/openliberty/guides/todo/TodoIT.java`
-----
-
-TodoIT.java
-[source, Java, linenums, indent=0, role="code_column hide_tags=copyright"]
-----
-include::finish/src/test/java/it/io/openliberty/guides/todolistSample/TodoIT.java[]
-----
-
-* Explain what each [hotspot=test1 hotspot=test2]`@Test` test case is testing
-* Explain key methods
-// ======================================================================================================
-
-//--** Include this for info on how to run the tests
-[role='command']
-include::{common-includes}/devmode-test.adoc[]
-
-//--** Including a listing block with test results here
-//--** Show console output of the test results
-
-//--** OPTIONAL: after listing the test results, mention a simple change a user can make/introduce that
-//--** will cause the tests to fail. Be brief and don't give the users all of the instructions.
-//--** At this point, they should be comfortable enough to figure it out on their own.
-
-//--** Include this for info on how to quit development mode
-[role='command']
-include::{common-includes}/devmode-quit.adoc[]
-
-
-== Great work! You're done!
-
-//--** Briefly summarize what the user achieved in this guide (1-2 sentences).
-EXAMPLE: You have just completed building a simple todo list application using JAXRS and CDI services in Open Liberty.
-
-//--** OPTIONAL: briefly state what the user could do next now that they've learned the
-//--** technologies in this guide.
-
-//--** Include the below from the guides-common repo to tell users how they can contribute to the guide
-include::{common-includes}/attribution.adoc[subs="attributes"]
-
-//--** DO NO CREATE ANYMORE SECTIONS AT THIS POINT
-//--** Related guides will be added in automatically here if you included them in ":page-related-guides"
-// ------------ END ------------
+root
+   ├── BOM
+   ├── demo
+   ├── ESA
+   └── integration
 ```
+
+`BOM` is the Bill of Materials. It tells Open Liberty which Maven artifacts are part of the feature.
+
+`demo` is a simple demo application.
+
+`integration` is an OSGi bundle containing new code written to integrate the pre-existing libraries into Open Liberty, in this case by exposing library classes to CDI.
+
+`ESA` is an OSGi Enterprise Subsystem Archive that packages up integration and the pre-existing libraries.
+
+Depending on your needs, the  `integration` bundle might not be required. If you expect developers to use your library with plain old java syntax like `new LibraryClas()s`, static accessors, or if it already has CDI producers or annotations, you might be able to ignore integration.
+
+=== Try what you will build
+
+The `finish` directory contains a completed version of this tutorial. Inside `finish`, have a look at `demo/src/main/java/example/app/TestServlet.java`. You will see that this class uses a class from our pre-existing library in two separate ways, once by injecting it via CDI and once as a plain old java class.
+
+Next have a look at `integration/src/main/java/com/ibm/example/cdi/CDIProducer.java` and you will see the `@Producer` method that turns a pre-existing class into an injectable bean.
+
+Lets compile it and give it a try, return to the `finish` directory and run the following commands:
+
+```
+mvn install
+cd demo
+mvn liberty:create
+mvn liberty:prepare-feature
+mvn liberty:install-feature
+```
+
+- `mvn liberty:create` creates a server locally.
+- `mvn liberty:prepare-feature` populates your maven repository with details about Liberty features so the Liberty feature manager can install them.
+- `mvn liberty:install-feature` instructs that feature manager to install our new feature.
+
+Have a quick look inside `target/open-liberty-integration.war`. You will see that it does not contain `Apache Commons`. Thanks to our integration code, `Apache Commons` is now provided by Liberty.
+
+Now use `mvn liberty:run` to start the server. Visit the http://localhost:8080/open-liberty-integration/  URL and you will see the two `ConstantInitializer` objects output Hello World.
+
+
+=== Step one: Create the integration bundle
+
+The integration bundle will become an extension to Open Liberty, exposing new options to hosted applications. You can write a bundle that simply repackages an existing library as an Open Liberty feature. However, ours will go further by registering classes with the CDI subsystem so that applications can inject them.
+
+==== Write the Java code
+
+Navigate to the `start/integration/src/main/java/com/ibm/example/cdi/` directory. You will see two packages: `internal` and `api`. When you are finished, the contents of `api` will be available to import into application code. The contents of `internal` will not be, even though they can affect application classes.
+
+It is unlikely that a real integration glue package will need to be exposed as an API. You will see a more realistic example of exposing a pre-existing API in the next section.
+
+`api` has one file: `ExampleQualifier.java`. This is a normal CDI qualifier that you can ignore.
+
+`internal` has two files:  `CDIProducer.java` and `CDIIntegrationMetaData.java`.
+
+    • `CDIIntegrationMetaData.java` will implement an Open Liberty SPI that can register new beans.
+    • `CDIProducer.java` will be the new bean that produces other beans after constructing the contained object. In a real feature, it might read configuration and construct the bean using a factory object or the builder pattern.
+
+Open `CDIProducer.java` and add a producer method by adding the following code:
+
+[source,java]
+----
+	public ConstantInitializer<String> getConstantInitializer()
+	{
+            return new ConstantInitializer<String>("Hello");
+        }
+----
+
+This method will do everything you need to create and return a fully configured object. However, CDI will not yet be aware it should invoke this method without the proper annotations. Add the following:
+
+    • `@Produces` - so CDI knows this method is a source of an injectable bean, the bean’s type will come from the method’s return type.
+    • `@Dependent` - This will be the scope of the bean. We are using `@Dependent` because ConstantInitializer’s only constructor needs a parameter to make it non-proxiable.
+    • `@ExampleQualifier` - We’re adding a qualifier to the bean only so we have an example of an API class.
+
+Finally, since `CDIProducer` is itself a bean, it needs a scope. As `CDIProducer` has no state, add `@ApplicationScoped` to the class. All together, `CDIProducer` should look like the following example:
+
+[source,java]
+----
+package com.ibm.example.cdi.internal;
+
+import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.Dependent;
+
+import org.apache.commons.lang3.concurrent.ConstantInitializer;
+
+import com.ibm.example.cdi.api.ExampleQualifier;
+@ApplicationScoped
+public class CDIProducer
+{
+	@Produces
+	@Dependent
+        @ExampleQualifier
+	public ConstantInitializer<String> getConstantInitializer()
+	{
+            return new ConstantInitializer<String>("Hello");
+        }
+}
+----
+
+Next, open the  `CDIIntegrationMetaData.java` file. To complete this class, register it as an OSGi component so that Open Liberty will provide it to the CDI framework when it looks for its lists of extensions. And then we’ll have to register `CDIProducer` as a bean.
+
+Add `@Component(service = CDIExtensionMetadata.class, configurationPolicy = IGNORE)` and `implements CDIExtensionMetadata` to the class to make it an OSGi component.
+
+Then add the following method
+
+[source,java]
+----
+	public Set<Class<?>> getBeanClasses() {
+		return Set.of(CDIProducer.class);
+	}
+----
+
+Before proceeding to the next step, review the Javadoc for https://openliberty.io/docs/latest/reference/javadoc/spi/cdi-1.2.html[CDIExtensionMetadata]. 
+
+It is also important to be aware that `getBeanClasses()` is a unique Open Liberty idiom. The normal way to add a new bean would be to make a class that implements `javax.enterprise.inject.spi.Extension` and register it via `META-INF/services`.
+
+If you wish to use `Extension` for compatibility with other Jakarta EE servers or because your integration requires the power of a full `Extension`, then `CDIExtensionMetadata` has a different method you can use for this purpose. If you want to register your extension via `META-INF/services` rather than ` CDIExtensionMetadata`, see the link:https://openliberty.io/docs/latest/reference/feature/bells-1.0.html[BELL feature] documentation. 
+
+==== Write the pom.xml
+
+Open the `start/integration/pom.xml` file.
+
+The `pom.xml` already contains all the dependencies we need to compile and build an unconfigured Maven bundle plugin. That is the next step.
+
+The bundle needs a human readable `<Bundle-Name>`, a machine readable `<Bundle-SymbolicName>`, and we need to provide a list of packages to include in the bundle.
+
+Inside `<instructions>` add the line `<Bundle-Name>example.user.feature.human.name</Bundle-Name>` and `<Bundle-SymbolicName>example.user.feature.integration.machine.name</Bundle-SymbolicName>`.
+
+Also inside `<instructions>` you will find the tag `<Export-Package>`, populate it with.
+
+```
+${new.integration.code.api.package};version="1.0.0",
+${new.integration.code.private.package};version="1.0.0"
+```
+
+These classes will not be registered correctly without a version number. 
+
+The instructions section of `integration/pom.xml` should now look something like this: 
+
+```
+<instructions>
+    <Export-Package>
+        ${new.integration.code.api.package};version="1.0.0", 
+        ${new.integration.code.private.package};version="1.0.0", 
+    </Export-Package>
+    <Bundle-SymbolicName>
+        example.user.feature.integration.machine.name
+    </Bundle-SymbolicName>
+    <Bundle-Name>example.user.feature.human.name</Bundle-Name> 
+    <Bundle-Version>1.0.0</Bundle-Version>
+</instructions>
+```
+
+Going back to the parent `pom.xml` set these properties:
+
+```
+<new.integration.code.private.package>com.ibm.example.cdi.internal</new.integration.code.private.package>    <new.integration.code.api.package>com.ibm.example.cdi.api</new.integration.code.api.package>
+```
+
+=== Step two: Create the ESA
+
+Open Liberty features are packaged as an Enterprise Subsystem Archive (ESA).  We will create one that includes both our new integration code and the pre-existing library.
+
+Open `esa/pom.xml`
+
+The first thing we need to do is ensure our ESA will have a `manifest.mf` file. Set `<generateManifest>true</generateManifest>` in the configuration of `esa-maven-plugin`.
+
+Now, in instructions we will set a subystem symbolic name `<Subsystem-SymbolicName>example.user.feature.esa.machine.name;visibility:=public</Subsystem-SymbolicName>`. Setting the visibility to `public` is required.
+
+We will also need an IBM shortname. Add `<IBM-ShortName>${feature.name}</IBM-ShortName>` inside instructions, and set ${feature.name} to `example-feature-1.0` in the root pom.xml
+
+Finally add
+
+```
+${pre.existing.library.package};version="3.14.0",
+${new.integration.code.api.package};version="1.0.0"
+```
+
+Under IBM-API-Package. This will make those two packages visible to applications at runtime.
+
+The ESA is now complete. But there is one final step, set `${pre.existing.library.package}` to `org.apache.commons.lang3.concurrent` in the parent pom.xml
+
+=== Step three: Create the Bill of Materials
+
+The `liberty-maven-plugin` requires a bill of materials to find and install features. In the real world, the Bill of Materials might be defined in the ESA `pom.xml` file, but this tutorial will keep them separate for clarity.
+
+Open bom/pom.xml and add the following dependency.
+
+[source.xml]
+----
+      <dependency>
+        <groupId>com.ibm.example.user.feature</groupId>
+        <!-- This is ${esa.artefact.id}. A variable cannot be used here -->
+        <!-- As this needs to be readable outside this project. -->
+        <artifactId>liberty-feature</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <type>esa</type>
+        <scope>provided</scope>
+      </dependency>
+----
+
+=== Step four: Add your Liberty user feature to a liberty server
+
+Go to demo/src and add the line `<feature>usr:example-feature-1.0</feature>` inside `<featureManager>`. `usr:` is prepended for all user features, and the second part of the feature name is the `IBM-ShortName` for the feature. 
+
+Naturally a liberty server.xml cannot read properties from a pom.xml, so we have to put `usr:example-feature-1.0` in as a raw string
+
+=== Gotchas
+
+Here are a few non-obvious risks and things to be aware off.
+
+- The use of injection for libraries is limited. You can take classes found in the library and inject them into application classes, but you can't take classes provided by Open Liberty itself, or application code, and inject them into your library’s classes. Incidentally, the way to get a Config object from MicroProfile Config in OpenLiberty without injection is `org.eclipse.microprofile.config.ConfigProvider.getConfig(Thread.currentThread().getContextClassLoader());`
+
+- The `<Export-Package>` tag in the `integration/pom.xml` file controls what packages are included in the bundle. Make sure you get everything you need.
+
+- If a package isn’t listed as `IBM-API-PACKAGE`, applications will not be able to access classes from that package. This means trying to `@Inject` those classes will fail.
+
